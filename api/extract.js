@@ -35,7 +35,7 @@ Montos como enteros sin puntos ni símbolos. Campos no visibles = null.`
         }]
       }),
     });
-
+ 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       return res.status(response.status).json({ error: err.error?.message || 'Error ' + response.status });
