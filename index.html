@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extractor de Facturas · VanTrust Capital</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#2AADB8;--primary-dk:#1F8A94;--primary-lt:#E6F7F9;
+  --navy:#1A2B3C;--navy-mid:#243447;
+  --bg:#F3F5F8;--white:#fff;--border:#DDE2EA;
+  --text:#1A2B3C;--muted:#6B7A8D;
+  --amber-bg:#FFF8E6;--red-bg:#FFF0F0;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+html,body{min-height:100vh;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:15px}
+
+.top{background:var(--navy);height:56px;display:flex;align-items:center;padding:0 1.75rem;gap:12px;border-bottom:2px solid var(--primary)}
+.dot-grid{display:grid;grid-template-columns:repeat(3,5px);gap:3px}
+.d{width:5px;height:5px;border-radius:50%;background:var(--primary)}
+.d.dim{opacity:.25}
+.brand-text{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.02em;margin-left:8px}
+.brand-text span{color:var(--primary)}
+.sep{color:rgba(255,255,255,.2);margin:0 10px;font-weight:300}
+.tool-name{font-size:13px;color:rgba(255,255,255,.5)}
+
+.page{max-width:880px;margin:0 auto;padding:1.75rem 1.5rem 4rem}
+
+.drop-card{background:var(--white);border-radius:14px;border:2px dashed var(--border);padding:2.25rem 2rem;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:1rem}
+.drop-card:hover,.drop-card.over,.drop-card.has-files{border-color:var(--primary);background:var(--primary-lt)}
+.drop-icon{width:56px;height:56px;border-radius:14px;background:var(--primary-lt);margin:0 auto .875rem;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.drop-card.has-files .drop-icon{background:var(--primary)}
+.drop-icon svg{width:26px;height:26px;color:var(--primary);transition:color .2s}
+.drop-card.has-files .drop-icon svg{color:#fff}
+.drop-title{font-size:17px;font-weight:600;color:var(--navy);margin-bottom:5px}
+.drop-sub{font-size:13px;color:var(--muted)}
+.fmts{display:flex;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+.fmt{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+input[type=file]{display:none}
+
+.queue{display:none;flex-direction:column;gap:6px;margin-bottom:1rem}
+.queue.show{display:flex}
+.qi{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px}
+.qi-ico{width:34px;height:34px;background:var(--bg);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.qi-info{flex:1;min-width:0}
+.qi-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--navy)}
+.qi-size{font-size:11px;color:var(--muted);margin-top:1px}
+.qi-st{flex-shrink:0;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.qi-st.waiting{background:var(--bg);color:var(--muted)}
+.qi-st.processing{background:#E8F4FF;color:#1A6AB5;animation:pulse 1.2s ease-in-out infinite}
+.qi-st.done{background:var(--primary-lt);color:var(--primary-dk)}
+.qi-st.error{background:var(--red-bg);color:#8B1C1C}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.qi-rm{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:2px 6px;line-height:1}
+.qi-rm:hover{color:#D94F4F}
+
+.actions{display:flex;gap:8px;margin-bottom:1.5rem}
+.btn-main{flex:1;padding:13px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;font-family:var(--sans);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s}
+.btn-main:hover:not(:disabled){background:var(--primary-dk)}
+.btn-main:disabled{opacity:.45;cursor:not-allowed}
+.btn-sec{padding:12px 18px;background:var(--white);color:var(--muted);font-size:13px;font-weight:500;font-family:var(--sans);border:1px solid var(--border);border-radius:10px;cursor:pointer}
+.btn-sec:hover{background:var(--bg);color:var(--text)}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.prog-wrap{display:none;margin-bottom:1.25rem}
+.prog-wrap.show{display:block}
+.prog-label{font-size:12px;color:var(--muted);margin-bottom:6px}
+.prog-bar{height:6px;background:var(--border);border-radius:6px;overflow:hidden}
+.prog-fill{height:100%;background:var(--primary);border-radius:6px;transition:width .4s ease}
+
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1rem}
+.sc{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.sl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.sv{font-size:22px;font-weight:700;color:var(--navy);font-family:var(--mono)}
+.sv.accent{color:var(--primary-dk)}
+
+.results-section{display:none}
+.results-section.show{display:block}
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.results-title{font-size:14px;font-weight:600;color:var(--navy)}
+.btn-export{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--navy);color:#fff;font-size:13px;font-weight:600;font-family:var(--sans);border:none;border-radius:8px;cursor:pointer;transition:background .15s}
+.btn-export:hover{background:var(--navy-mid)}
+
+.tbl-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:720px}
+thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:.5px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#F8FAFB}
+tbody td{padding:10px 14px;vertical-align:middle;font-family:var(--mono);font-size:12px;color:var(--text)}
+tbody td.nm{font-family:var(--sans);font-weight:500;color:var(--navy);font-size:13px}
+.money{font-weight:600;color:var(--primary-dk)}
+.total-m{font-weight:700;color:var(--navy)}
+.badge{display:inline-flex;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--sans);margin-left:4px}
+.alta{background:var(--primary-lt);color:var(--primary-dk)}
+.media{background:var(--amber-bg);color:#8B5C00}
+.baja{background:var(--red-bg);color:#8B1C1C}
+.nil{color:#C5CBD4;font-style:italic;font-family:var(--sans);font-size:11px}
+
+.err{display:none;background:var(--red-bg);border:1px solid #F0ABAB;border-radius:10px;padding:12px 16px;margin-bottom:1rem;font-size:13px;color:#8B1C1C;gap:8px;align-items:flex-start}
+.err.show{display:flex}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--navy);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:500;opacity:0;transition:all .2s;pointer-events:none;z-index:999;border-bottom:2px solid var(--primary)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.footer{text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--muted)}
+.footer a{color:var(--primary);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="dot-grid">
+    <div class="d dim"></div><div class="d"></div><div class="d dim"></div>
+    <div class="d"></div><div class="d"></div><div class="d"></div>
+    <div class="d dim"></div><div class="d"></div><div class="d dim"></div>
+  </div>
+  <span class="brand-text">Van<span>Trust</span> Capital</span>
+  <span class="sep">|</span>
+  <span class="tool-name">Extractor de Facturas</span>
+</div>
+
+<div class="page">
+
+  <div class="drop-card" id="dz" onclick="document.getElementById('fi').click()">
+    <input type="file" id="fi" accept=".pdf,image/png,image/jpeg,image/webp" multiple>
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="12" x2="12" y2="18"/>
+        <line x1="9" y1="15" x2="15" y2="15"/>
+      </svg>
+    </div>
+    <div class="drop-title" id="dtitle">Arrastra las facturas aquí</div>
+    <div class="drop-sub" id="dsub">Puedes subir varias a la vez · PDF o imagen</div>
+    <div class="fmts">
+      <span class="fmt">PDF</span>
+      <span class="fmt">PNG / JPG</span>
+      <span class="fmt">Múltiples archivos</span>
+    </div>
+  </div>
+
+  <div class="queue" id="queue"></div>
+
+  <div class="err" id="errBox">
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0;margin-top:1px">
+      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+    </svg>
+    <span id="errMsg"></span>
+  </div>
+
+  <div class="actions" id="actions" style="display:none">
+    <button class="btn-main" id="btnExtract" onclick="startExtraction()">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+      </svg>
+      Extraer datos
+    </button>
+    <button class="btn-sec" onclick="clearAll()">Limpiar</button>
+  </div>
+
+  <div class="prog-wrap" id="progWrap">
+    <div class="prog-label" id="progLabel">Procesando…</div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="results-section" id="results">
+    <div class="summary" id="summary"></div>
+    <div class="results-header">
+      <span class="results-title" id="resultsTitle">Facturas extraídas</span>
+      <button class="btn-export" onclick="exportTSV()">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+        Exportar a Excel / GVE
+      </button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Archivo</th><th>Tipo</th><th>Folio</th>
+            <th>RUT Emisor</th><th>Emisor</th>
+            <th>RUT Deudor</th><th>Deudor</th>
+            <th>Fecha</th><th>Neto</th><th>IVA</th><th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://www.vantrustcapital.cl" target="_blank">vantrustcapital.cl</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+
+let files=[], results=[];
+const dz=document.getElementById('dz'), fi=document.getElementById('fi');
+
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles([...e.dataTransfer.files]);});
+fi.addEventListener('change',e=>{addFiles([...e.target.files]);fi.value='';});
+
+function addFiles(nf){
+  nf.forEach(f=>{if(!files.find(x=>x.name===f.name&&x.size===f.size))files.push(f);});
+  render();
+}
+function removeFile(i){files.splice(i,1);render();}
+
+function render(){
+  const q=document.getElementById('queue'), ac=document.getElementById('actions');
+  if(!files.length){
+    q.classList.remove('show');ac.style.display='none';dz.classList.remove('has-files');
+    document.getElementById('dtitle').textContent='Arrastra las facturas aquí';
+    document.getElementById('dsub').textContent='Puedes subir varias a la vez · PDF o imagen';
+    return;
+  }
+  dz.classList.add('has-files');
+  document.getElementById('dtitle').textContent=files.length===1?'1 factura lista':`${files.length} facturas listas`;
+  document.getElementById('dsub').textContent='Clic para agregar más archivos';
+  q.classList.add('show');ac.style.display='flex';
+  q.innerHTML=files.map((f,i)=>`
+    <div class="qi">
+      <div class="qi-ico">📄</div>
+      <div class="qi-info">
+        <div class="qi-name">${f.name}</div>
+        <div class="qi-size">${(f.size/1024).toFixed(0)} KB</div>
+      </div>
+      <span class="qi-st waiting" id="qs${i}">En cola</span>
+      <button class="qi-rm" onclick="removeFile(${i})">×</button>
+    </div>`).join('');
+}
+
+function clearAll(){
+  files=[];results=[];render();
+  g('results').classList.remove('show');
+  g('progWrap').classList.remove('show');
+  g('errBox').classList.remove('show');
+}
+
+function g(id){return document.getElementById(id);}
+function setSt(i,cls,lbl){const e=g('qs'+i);if(e){e.className='qi-st '+cls;e.textContent=lbl;}}
+
+async function toB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
+
+async function extractOne(file,idx){
+  setSt(idx,'processing','Procesando…');
+  const b64=await toB64(file), mime=file.type||'application/pdf';
+  const content=mime==='application/pdf'
+    ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}
+    :{type:'image',source:{type:'base64',media_type:mime,data:b64}};
+
+  const res=await fetch('/api/extract',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({fileData:b64,mimeType:mime})
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error||'Error '+res.status);}
+  return await res.json();
+}
+
+async function startExtraction(){
+  if(!files.length)return;
+  const btn=g('btnExtract');
+  btn.disabled=true;
+  btn.innerHTML='<div class="spin"></div> Procesando…';
+  g('progWrap').classList.add('show');
+  g('results').classList.remove('show');
+  g('errBox').classList.remove('show');
+  results=[];
+
+  for(let i=0;i<files.length;i++){
+    g('progLabel').textContent=`Procesando ${i+1} de ${files.length}…`;
+    g('progFill').style.width=((i/files.length)*100)+'%';
+    try{
+      const data=await extractOne(files[i],i);
+      results.push({ok:true,data,filename:files[i].name});
+      setSt(i,'done','✓ Listo');
+    }catch(e){
+      results.push({ok:false,error:e.message,filename:files[i].name});
+      setSt(i,'error','Error');
+    }
+  }
+  g('progFill').style.width='100%';
+  const ok=results.filter(r=>r.ok).length;
+  g('progLabel').textContent=`${ok} de ${files.length} procesadas correctamente`;
+  btn.disabled=false;
+  btn.innerHTML='<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg> Extraer datos';
+  renderResults();
+}
+
+function m(v,money){
+  if(v===null||v===undefined)return null;
+  if(money)return '$\u00A0'+Number(v).toLocaleString('es-CL');
+  return String(v);
+}
+function tv(v,money){const fv=m(v,money);return fv!==null?fv:'<span class="nil">—</span>';}
+function badge(key,c){
+  if(!c||!c[key])return '';
+  return`<span class="badge ${c[key]}">${{alta:'✓',media:'Revisar',baja:'Verificar'}[c[key]]}</span>`;
+}
+
+function renderResults(){
+  const ok=results.filter(r=>r.ok);
+  if(!ok.length){g('errMsg').textContent='No se pudo procesar ninguna factura.';g('errBox').classList.add('show');return;}
+  const tNeto=ok.reduce((s,r)=>s+(r.data.monto_neto||0),0);
+  const tTotal=ok.reduce((s,r)=>s+(r.data.total||0),0);
+  g('summary').innerHTML=`
+    <div class="sc"><div class="sl">Facturas procesadas</div><div class="sv">${ok.length}</div></div>
+    <div class="sc"><div class="sl">Total neto acumulado</div><div class="sv accent">$${tNeto.toLocaleString('es-CL')}</div></div>
+    <div class="sc"><div class="sl">Total con IVA</div><div class="sv">$${tTotal.toLocaleString('es-CL')}</div></div>`;
+  g('tblBody').innerHTML=results.map(r=>{
+    if(!r.ok)return`<tr><td class="nm">${r.filename}</td><td colspan="10" style="color:#D94F4F;font-family:var(--sans)">Error: ${r.error}</td></tr>`;
+    const d=r.data,c=d.confianza||{};
+    return`<tr>
+      <td class="nm">${r.filename.length>22?r.filename.slice(0,20)+'…':r.filename}</td>
+      <td>${tv(d.tipo_documento)}</td>
+      <td style="font-weight:600">${tv(d.numero_folio)}</td>
+      <td>${tv(d.rut_emisor)}${badge('rut_emisor',c)}</td>
+      <td>${tv(d.razon_social_emisor)}</td>
+      <td>${tv(d.rut_deudor)}${badge('rut_deudor',c)}</td>
+      <td>${tv(d.razon_social_deudor)}</td>
+      <td>${tv(d.fecha_emision)}</td>
+      <td class="money">${tv(d.monto_neto,true)}</td>
+      <td>${tv(d.iva,true)}</td>
+      <td class="total-m">${tv(d.total,true)}</td>
+    </tr>`;
+  }).join('');
+  g('resultsTitle').textContent=`${ok.length} factura${ok.length!==1?'s':''} extraída${ok.length!==1?'s':''}`;
+  g('results').classList.add('show');
+}
+
+function exportTSV(){
+  const ok=results.filter(r=>r.ok);if(!ok.length)return;
+  const hdr=['Archivo','Tipo','Folio','RUT Emisor','Emisor','RUT Deudor','Deudor','Fecha','Monto Neto','IVA','Total'];
+  const rows=ok.map(r=>{const d=r.data;return[r.filename,d.tipo_documento||'',d.numero_folio||'',d.rut_emisor||'',d.razon_social_emisor||'',d.rut_deudor||'',d.razon_social_deudor||'',d.fecha_emision||'',d.monto_neto||'',d.iva||'',d.total||''];});
+  navigator.clipboard.writeText([hdr,...rows].map(r=>r.join('\t')).join('\n')).then(()=>showToast('✓ Copiado — pega directo en Excel o GVE'));
+}
+
+function showToast(msg){
+  const t=g('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
